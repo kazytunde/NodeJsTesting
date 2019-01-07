@@ -1,4 +1,6 @@
 const lib = require("../lib");
+const db = require("../db");
+const mail = require("../mail");
 
 describe("absolute", () => {
   it("should return positive if input is positive number", () => {
@@ -65,5 +67,50 @@ describe("greet", () => {
     const message = lib.greet("Mosh");
     //expect(message).toMatch(/Mosh/);
     expect(message).toContain("Mosh");
+  });
+});
+
+describe("applyDiscount", () => {
+  it("should apply discount of 10% if customer has more than 10 points", () => {
+    db.getCustomerSync = customerId => {
+      console.log("Fake reading customer");
+      return { id: customerId, points: 20 };
+    };
+    const order = { customerId: 1, totalPrice: 10 };
+    lib.applyDiscount(order);
+    expect(order.totalPrice).toBe(9);
+  });
+});
+
+describe("notifyCustomer", () => {
+  it("should send email to customer", async () => {
+    db.getCustomerSync = jest.fn().mockReturnValue({ email: "a" });
+    //This is mock to make sure this function was called, when notifyCustomer was called.
+    mail.send = jest.fn();
+
+    lib.notifyCustomer({ customerId: 1 });
+
+    //'toHaveBeenCalledWith("a", "..")' This works with numbers, boolean or objects but not strings
+    expect(mail.send).toHaveBeenCalled();
+
+    //To validate the arguments passed to the function
+    //mock.calls is an array of all the calls to this function
+    //calls[0][0] first call , then first argument
+    //calls[0][1] first call , then second argument
+    expect(mail.send.mock.calls[0][0]).toBe("a");
+    //regular expression to check the word 'order' is contained in that argument
+    expect(mail.send.mock.calls[0][1]).toMatch(/order/);
+  });
+});
+
+describe("JestMocking", () => {
+  it("should test demo jest mocking", async () => {
+    const mockFunction = jest.fn();
+    //mockFunction.mockReturnValue(1); Sync
+    mockFunction.mockResolvedValue(1); //  Async;
+    //mockFunction.mockRejectedValue(new Error("Username is required."));
+
+    const result = await mockFunction();
+    expect(result).toBe(1);
   });
 });
